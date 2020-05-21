@@ -82,7 +82,6 @@ class custom_dataset_skewed_food(Dataset):
 
 
 class custom_dataset_skewed_food_randomGetItem(Dataset):
-    '''
     skewed_training_path = "./food11re/skewed_training/"
     skewed_testing_path= "./food11re/evaluation/"
     skewed_validation_path= "./food11re/validation/"
@@ -90,6 +89,7 @@ class custom_dataset_skewed_food_randomGetItem(Dataset):
     skewed_training_path = "./food11re/food11re/training/"
     skewed_testing_path= "./food11re/food11re/evaluation/"
     skewed_validation_path= "./food11re/food11re/validation/"
+    '''
     image_path_list = []
     image_label_list = []
     each_class_size = []
