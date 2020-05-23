@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-
-
+from torch.utils.data.sampler import  WeightedRandomSampler
 import torch
 import torchvision
 import torchvision.transforms as transforms
@@ -12,6 +11,13 @@ import torch.nn as nn
 
 from custom_dataset import custom_dataset_skewed_food
 
+###################variable
+epoch_count=55
+weight_decay=0.0005
+dropout=0
+
+
+########################
 
 #To determine if your system supports CUDA
 print("==> Check devices..")
@@ -42,9 +48,20 @@ transform_train = transforms.Compose([
 #trainset = torchvision.datasets.CIFAR10(root='/tmp/dataset-nctu', train=True, download=False, transform=transform_train)
 trainset  = custom_dataset_skewed_food("training",transform_train)
 
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=32,
-shuffle=True, num_workers=0)
 
+
+sampler = WeightedRandomSampler(trainset.labelImgWeight(),\
+                                num_samples=trainset.data_len,\
+                                replacement=True)
+
+
+'''
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=32,
+shuffle=False, num_workers=0,sampler=sampler)
+'''
+
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=32,
+                                          shuffle=True, num_workers=0)
 
 
 
@@ -54,6 +71,8 @@ print('==> Building model..')
 
 
 net = Net()
+net.defineDropout(dropout)
+
 net = net.to(device)
 
 print('==> Defining loss function and optimize..')
@@ -62,7 +81,11 @@ import torch.optim as optim
 #loss function
 criterion = nn.CrossEntropyLoss()
 #optimization algorithm
-optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+#optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+
+#weight_decay 是l2 regularization
+optimizer= optim.Adam(net.parameters(), lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=weight_decay, amsgrad=False)
+
 
 
 print('==> Training model..')
@@ -71,9 +94,11 @@ print('==> Training model..')
 net.train()
 
 #每一個epoch都會做完整個dataset
-for epoch in range(75):  # loop over the dataset multiple times
+for epoch in range(epoch_count):  # loop over the dataset multiple times
     running_loss = 0.0
     correct = 0
+    class_count = [0] * 10
+    class_correct_count = [0] * 10
     #inputs 是一個batch 的image labels是一個batch的label
     for i, (inputs, labels) in enumerate(trainloader, 0):
 
@@ -92,7 +117,13 @@ for epoch in range(75):  # loop over the dataset multiple times
         # if the model predicts the same results as the true
         # label, then the correct counter will plus 1
         correct += pred.eq(labels).sum().item()
-        
+        #each class
+        ans_list = pred.eq(labels)
+        for index in range(labels.shape[0]):
+            class_count[labels[index]] += 1
+            if ans_list[index]:
+                class_correct_count[labels[index]] += 1
+
         loss = criterion(outputs, labels)
         
         loss.backward()
@@ -104,36 +135,38 @@ for epoch in range(75):  # loop over the dataset multiple times
             print('[%d, %5d] loss: %.3f' %
                   (epoch + 1, i + 1, running_loss / 200))
             running_loss = 0.0
-    print('%d epoch, training accuracy: %.4f' % (epoch+1, 100.*correct/len(trainset)))
+    print('%d epoch, training accuracy: %.4f' % (epoch+1, correct/len(trainset)))
+    for i in range(10):
+        print('Class %d : %.2f %d/%d' % \
+              (i,class_correct_count[i]/class_count[i],class_correct_count[i],class_count[i]))
+
+
 print('Finished Training')
 
 print('==> Saving model..')
 
-#only save model parameters
-torch.save(net.state_dict(), './checkpoint.t7')
-#you also can store some log information
+
 state = {
     'net': net.state_dict(),
-    'acc': 100.*correct/len(trainset),
-    'epoch': 75
+    'acc': correct/len(trainset),
+    'class_correct_count': class_correct_count,
+    'class_count': class_count,
+    'actual_class_count': trainset.each_class_size,
+    'image_path': custom_dataset_skewed_food.img_path,
+    'parameters':{
+        'epoch': epoch_count,
+        'dropout': dropout,
+        'optimizer':optimizer.__repr__
+    }
 }
-#torch.save(state, './checkpoint.t7')
+
+torch.save(state, './trainedModel/skew_checkpoint.t7')
 
 #save entire model
-torch.save(net, './model.pt')
+torch.save(net, './trainedModel/skew_model.pt')
 
 print('Finished Saving')
 
-print('==> Loading model..')
-
-#If you just save the model parameters, you
-#need to redefine the model architecture, and
-#load the parameters into your model
-'''
-net = Net()
-checkpoint = torch.load('./checkpoint.t7')
-net.load_state_dict(checkpoint['net'])
-'''
 
 
 
