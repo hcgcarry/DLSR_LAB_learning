@@ -1,5 +1,7 @@
 
 import torch
+import torchvision.models as models
+import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
 from model import Net
@@ -16,7 +18,8 @@ transform_test = transforms.Compose([
                          std=[0.229, 0.224, 0.225])
 ])
 
-testset = custom_dataset_skewed_food("testing",transform_test)
+testset = custom_dataset_skewed_food("testing")
+testset.setTransform(transform_test)
 #trainset= custom_dataset_skewed_food("training",transform_test)
 testloader = torch.utils.data.DataLoader(testset, batch_size=32,
                                          shuffle=False, num_workers=0)
@@ -26,8 +29,14 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=32,
 #net = torch.load(modelPath,map_location=torch.device('cpu'))
 
 ######################################training statics
-net = Net()
+#net = Net()
+net = models.resnet18(pretrained=False);
+# replace the last layer
+num_features = net.fc.in_features
+net.fc = nn.Linear(num_features, 10)
+
 checkpoint = torch.load(modelPath,torch.device('cpu'))
+
 net.load_state_dict(checkpoint['net'])
 #net.cuda()
 

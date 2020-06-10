@@ -13,13 +13,14 @@ class Net(nn.Module):
     # define the layers
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 6, 3,padding=1)
+        self.conv1 = nn.Conv2d(3, 16, 3,padding=1)
         self.pool = nn.MaxPool2d(4, 4)
-        self.conv2 = nn.Conv2d(6, 16, 3,padding=1)
-        self.fc1 = nn.Linear(16 * 14 * 14, 512)
+        self.conv2 = nn.Conv2d(16, 26, 3,padding=1)
+        self.fc1 = nn.Linear(26 * 14 * 14, 512)
         self.fc2 = nn.Linear(512, 64)
         self.fc3 = nn.Linear(64, 10)
         self.relu = nn.ReLU()
+
 
     def defineDropout(self,dropout):
         self.dropout = dropout
@@ -28,12 +29,11 @@ class Net(nn.Module):
     def forward(self, x):
         x = self.pool(self.relu(self.conv1(x)))
         x = self.pool(self.relu(self.conv2(x)))
-        x = x.view(-1, 16 * 14 * 14)
+        x = x.view(-1, 26 * 14 * 14)
         x = self.relu(self.fc1(x))
         x = self.relu(self.fc2(x))
         x = self.fc3(x)
         x = nn.functional.dropout(x, p=self.dropout, training=self.training)
-        #x = nn.functional.softmax(x, dim=1)
         return x
 
     def reg_forward_hook(self):
