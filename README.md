@@ -1,11 +1,26 @@
 # DLSR_LAB_learning
-讀書會
-下載這個dataset https://www.kaggle.com/tohidul/food11
-執行 chmod 777 build_imbalanced_food11.sh
+download dataset:
+dataset https://www.kaggle.com/tohidul/food11
+chmod 777 build_imbalanced_food11.sh
 ./build_imbalanced_food11.sh
-train the model:python3 LAB-1-1-example-code.py
-load and test the exist model :python3 loadAndTestModel.py (須注意裡面的cuda設置）
-custom_dataset.py //處理food11這個dataset的class
-showsubplot.py // 顯示plot的class
-lab2macs.py  // 顯示mac數的class
-model.py //處理model的class
+train the model:python3 trainTheModel.py
+load and check testing the accuracy of exist model :python3 loadAndTestModel.py 
+
+
+
+
+convert model to onnx:
+python3 netToOnnx.py
+
+
+openvino (should have enviroment)
+optimization:
+cd openvino
+python3 mo.py --input_model /workspace/DLSR_LAB_learning/trainedModel/super_resolution.onnx --output_dir /workspace/DLSR_LAB_learning/trainedModel
+
+inference:
+in .zshrc:
+source /opt/intel/openvino_2020.2.120/bin/setupvars.sh
+shell:
+source .zshrc
+python3 openvino__loadmodel.py
