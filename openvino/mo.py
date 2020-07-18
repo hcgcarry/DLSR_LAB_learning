@@ -1,0 +1,1 @@
+/opt/intel/openvino_2020.2.120/deployment_tools/model_optimizer/mo.py

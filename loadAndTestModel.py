@@ -70,13 +70,24 @@ class_correct_count = [0]*10
 
 for i, (inputs, labels) in enumerate(testloader, 0):
     # change the type into cuda tensor
+    if i==0 :
+        print("type of inputs",type(inputs))
+        print(inputs.shape)
     inputs = inputs.to(device)
     labels = labels.to(device)
+    if i==0 :
+        print("type of inputs after to device",type(inputs))
 
     # forward + backward + optimize
     outputs = net(inputs)
     # select the class with highest probability
+    if i==0 :
+        print("outputs",outputs)
+        print("type of outputs",type(outputs))
+        print("len of outputs",len(outputs))
     _, pred = outputs.max(1)
+    if i==0 :
+        print("pred",pred)
     # if the model predicts the same results as the true
     # label, then the correct counter will plus 1
     correct += pred.eq(labels).sum().item()
