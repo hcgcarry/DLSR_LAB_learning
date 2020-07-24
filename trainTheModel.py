@@ -130,7 +130,7 @@ print('==> Building model..')
 net = models.resnet18(pretrained=True);
 # replace the last layer
 num_features = net.fc.in_features
-net.fc = nn.Linear(num_features, 10)
+net.fc = nn.Linear(num_features, 11)
 
 for idx, (name, param) in enumerate(net.named_parameters()):
     if idx < 60:  # count of layers is 62
@@ -167,8 +167,8 @@ net.train()
 for epoch in range(epoch_count):  # loop over the dataset multiple times
     running_loss = 0.0
     correct = 0
-    class_count = [0] * 10
-    class_correct_count = [0] * 10
+    class_count = [0] * 11
+    class_correct_count = [0] * 11
     #inputs 是一個batch 的image labels是一個batch的label
     for i, (inputs, labels) in enumerate(trainloader, 0):
 
@@ -206,7 +206,7 @@ for epoch in range(epoch_count):  # loop over the dataset multiple times
                   (epoch + 1, i + 1, running_loss / 200))
             running_loss = 0.0
     print('%d epoch, training accuracy: %.4f' % (epoch+1, correct/len(trainset)))
-    for i in range(10):
+    for i in range(11):
         print('Class %d : %.2f %d/%d' % \
               (i,class_correct_count[i]/class_count[i],class_correct_count[i],class_count[i]))
 

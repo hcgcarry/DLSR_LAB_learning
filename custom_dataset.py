@@ -16,7 +16,7 @@ class custom_dataset_skewed_food(Dataset):
     skewed_training_path = "./food11re/skewed_training/"
     skewed_testing_path= "./food11re/evaluation/"
     skewed_validation_path= "./food11re/validation/"
-    class_num=10
+    class_num=11
     '''
     skewed_training_path = "./food11re/food11re/training/"
     skewed_testing_path= "./food11re/food11re/evaluation/"
@@ -30,7 +30,7 @@ class custom_dataset_skewed_food(Dataset):
     img_path=""
     transform=None
     Imgaug = None
-
+    
     def __init__(self,mode):
         self.getImage(mode)
         self.data_len = len(self.image_label_list)
@@ -45,7 +45,7 @@ class custom_dataset_skewed_food(Dataset):
         elif mode == "validation":
             tmp_path = self.skewed_validation_path
         self.img_path=tmp_path
-        for index in range(10):
+        for index in range(11):
             path = tmp_path + str(index) + "/*"
             images_path = glob.glob(path)
             self.image_path_list.extend(images_path)
@@ -58,7 +58,7 @@ class custom_dataset_skewed_food(Dataset):
             '''
     def setImgaug(self,imgaug):
         self.Imgaug=imgaug
-
+        
     def __getitem__(self, index):
         single_image_path = self.image_path_list[index]
         '''

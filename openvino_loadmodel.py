@@ -86,97 +86,12 @@ def build_argparser():
     return parser
 
 
-def maintest():
-    log.basicConfig(format="[ %(levelname)s ] %(message)s", level=log.INFO, stream=sys.stdout)
-    args = build_argparser().parse_args()
-    model_xml = args.model
-    model_bin = os.path.splitext(model_xml)[0] + ".bin"
-
-    # Plugin initialization for specified device and load extensions library if specified
-    log.info("Creating Inference Engine")
-    ie = IECore()
-    if args.cpu_extension and 'CPU' in args.device:
-        ie.add_extension(args.cpu_extension, "CPU")
-    # Read IR
-    log.info("Loading network files:\n\t{}\n\t{}".format(model_xml, model_bin))
-    net = ie.read_network(model=model_xml, weights=model_bin)
-
-    if "CPU" in args.device:
-        supported_layers = ie.query_network(net, "CPU")
-        not_supported_layers = [l for l in net.layers.keys() if l not in supported_layers]
-        if len(not_supported_layers) != 0:
-            log.error("Following layers are not supported by the plugin for specified device {}:\n {}".
-                      format(args.device, ', '.join(not_supported_layers)))
-            log.error("Please try to specify cpu extensions library path in sample's command line parameters using -l "
-                      "or --cpu_extension command line argument")
-            sys.exit(1)
-
-    assert len(net.inputs.keys()) == 1, "Sample supports only single input topologies"
-    assert len(net.outputs) == 1, "Sample supports only single output topologies"
-    print("net inputs",net.inputs)
-    print("net outputs",net.outputs)
-    log.info("Preparing input blobs")
-    input_blob = next(iter(net.inputs))
-    out_blob = next(iter(net.outputs))
-    net.batch_size = len(args.input)
-    print("input_blob",input_blob)
-    print("out_blob",out_blob)
-    # Read and pre-process input images
-    n, c, h, w = net.inputs[input_blob].shape
-    print("input shape",net.inputs[input_blob].shape)
-    images = np.ndarray(shape=(n, c, h, w))
-    import glob
-    args.input = glob.glob(args.input + '/*/*')
-    for i in range(n):
-        image = cv2.imread(args.input[i])
-        print("image shape",image.shape)
-        
-        if image.shape[:-1] != (h, w):
-            log.warning("Image {} is resized from {} to {}".format(args.input[i], image.shape[:-1], (h, w)))
-            image = cv2.resize(image, (w, h))
-        image = image.transpose((2, 0, 1))  # Change data layout from HWC to CHW
-        images[i] = image
-    log.info("Batch size is {}".format(n))
-
-    # Loading model to the plugin
-    log.info("Loading model to the plugin")
-    exec_net = ie.load_network(network=net, device_name=args.device)
-
-    # Start sync inference
-    log.info("Starting inference in synchronous mode")
-    res = exec_net.infer(inputs={input_blob: images})
-
-    # Processing output blob
-    log.info("Processing output blob")
-    res = res[out_blob]
-    print("res",res)
-    log.info("Top {} results: ".format(args.number_top))
-    if args.labels:
-        with open(args.labels, 'r') as f:
-            labels_map = [x.split(sep=' ', maxsplit=1)[-1].strip() for x in f]
-    else:
-        labels_map = None
-    classid_str = "classid"
-    probability_str = "probability"
-    for i, probs in enumerate(res):
-        probs = np.squeeze(probs)
-        top_ind = np.argsort(probs)[-args.number_top:][::-1]
-        print("Image {}\n".format(args.input[i]))
-        print(classid_str, probability_str)
-        print("{} {}".format('-' * len(classid_str), '-' * len(probability_str)))
-        for id in top_ind:
-            det_label = labels_map[id] if labels_map else "{}".format(id)
-            label_length = len(det_label)
-            space_num_before = (len(classid_str) - label_length) // 2
-            space_num_after = len(classid_str) - (space_num_before + label_length) + 2
-            space_num_before_prob = (len(probability_str) - len(str(probs[id]))) // 2
-            print("{}{}{}{}{:.7f}".format(' ' * space_num_before, det_label,
-                                          ' ' * space_num_after, ' ' * space_num_before_prob,
-                                          probs[id]))
-        print("\n")
-    log.info("This sample is an API example, for any performance measurements please use the dedicated benchmark_app tool\n")
-
 ############################## 設定network
+import time  # 引入time模块
+
+startup_time = time.time()
+
+
 log.basicConfig(format="[ %(levelname)s ] %(message)s", level=log.INFO, stream=sys.stdout)
 args = build_argparser().parse_args()
 model_xml = args.model
@@ -203,17 +118,12 @@ if "CPU" in args.device:
 
 assert len(net.inputs.keys()) == 1, "Sample supports only single input topologies"
 assert len(net.outputs) == 1, "Sample supports only single output topologies"
-print("net inputs",net.inputs)
-print("net outputs",net.outputs)
 log.info("Preparing input blobs")
 input_blob = next(iter(net.inputs))
 out_blob = next(iter(net.outputs))
 net.batch_size = len(args.input)
-print("input_blob",input_blob)
-print("out_blob",out_blob)
 # Read and pre-process input images
 n, c, h, w = net.inputs[input_blob].shape
-print("input shape",net.inputs[input_blob].shape)
 log.info("Batch size is {}".format(n))
 
 # Loading model to the plugin
@@ -222,7 +132,8 @@ exec_net = ie.load_network(network=net, device_name=args.device)
 
 
 ############
-
+finishLoading_time = time.time()
+print("startup loading time = ",startup_time - finishLoading_time)
 print('Finished Loading')
 print('==> Testing model..')
 
@@ -236,6 +147,7 @@ correct = 0
 class_count = [0] * 10
 class_correct_count = [0]*10
 
+start_process_image_time = time.time()
 
 for i, (inputs, labels) in enumerate(testloader, 0):
     # change the type into cuda tensor
@@ -249,10 +161,6 @@ for i, (inputs, labels) in enumerate(testloader, 0):
     
     outputs = torch.from_numpy(outputs[out_blob])
     # select the class with highest probability
-    print("type of outputs",type(outputs))
-    print("outputs",outputs)
-    print(len(outputs.max(1)))
-    print(type(outputs.max(1)))
     _, pred = outputs.max(1)
     print("pred",pred)
     print("labels",labels)
@@ -269,9 +177,16 @@ for i, (inputs, labels) in enumerate(testloader, 0):
     #class_count[labels] += 1
     #class_correct_count[labels] += result
 
+#### finish
+finish_processing_image_time = time.time()
+average_latency = (finish_processing_image_time - start_process_image_time )/len(testset)
+print("average latency (without startup time)",average_latency)
+print("FPS",1/average_latency)
 print('total testing accuracy: %.4f %d/%d' % (correct / len(testset),correct,len(testset)))
+
 for i in range(10):
     print('Class %d : %.2f %d/%d' % \
           (i,class_correct_count[i]/class_count[i],class_correct_count[i],class_count[i]))
 
-print('Finished Training')
+
+

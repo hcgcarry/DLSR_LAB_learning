@@ -10,7 +10,7 @@ from custom_dataset import custom_dataset_skewed_food
 modelPath='./trainedModel/skew_checkpoint.t7'
 
 
-batch_size = 32
+batch_size = 1
 
 #net = torch.load(modelPath,map_location=torch.device('cpu'))
 
@@ -19,7 +19,7 @@ batch_size = 32
 net = models.resnet18(pretrained=False);
 # replace the last layer
 num_features = net.fc.in_features
-net.fc = nn.Linear(num_features, 10)
+net.fc = nn.Linear(num_features, 11)
 
 checkpoint = torch.load(modelPath,torch.device('cpu'))
 
@@ -31,7 +31,7 @@ class_correct_count = checkpoint['class_correct_count']
 print("training statics")
 print("trainging total accuracy:%f" %(checkpoint['acc']))
 print("epoch %d" %(checkpoint['parameters']['epoch']))
-for i in range(10):
+for i in range(11):
     print('Class %d : %.2f %d/%d' % \
           (i,class_correct_count[i]/class_count[i],class_correct_count[i],class_count[i]))
 
