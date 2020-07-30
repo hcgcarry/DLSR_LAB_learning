@@ -144,8 +144,8 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 running_loss = 0.0
 correct = 0
 # inputs 是一個batch 的image labels是一個batch的label
-class_count = [0] * 10
-class_correct_count = [0]*10
+class_count = [0] * 11
+class_correct_count = [0]*11
 
 start_process_image_time = time.time()
 
@@ -184,7 +184,7 @@ print("average latency (without startup time)",average_latency)
 print("FPS",1/average_latency)
 print('total testing accuracy: %.4f %d/%d' % (correct / len(testset),correct,len(testset)))
 
-for i in range(10):
+for i in range(11):
     print('Class %d : %.2f %d/%d' % \
           (i,class_correct_count[i]/class_count[i],class_correct_count[i],class_count[i]))
 

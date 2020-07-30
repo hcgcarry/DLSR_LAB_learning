@@ -7,10 +7,10 @@ import torchvision.transforms as transforms
 from model import Net
 from custom_dataset import custom_dataset_skewed_food
 #modelPath='./trainedModel/skewModel.pt'
-modelPath='../trainedModel/skew_checkpoint.t7'
+modelPath='./trainedModel/skew_checkpoint.t7'
 
 
-
+batch_size = 1
 
 #net = torch.load(modelPath,map_location=torch.device('cpu'))
 
@@ -19,7 +19,7 @@ modelPath='../trainedModel/skew_checkpoint.t7'
 net = models.resnet18(pretrained=False);
 # replace the last layer
 num_features = net.fc.in_features
-net.fc = nn.Linear(num_features, 10)
+net.fc = nn.Linear(num_features, 11)
 
 checkpoint = torch.load(modelPath,torch.device('cpu'))
 
@@ -31,7 +31,7 @@ class_correct_count = checkpoint['class_correct_count']
 print("training statics")
 print("trainging total accuracy:%f" %(checkpoint['acc']))
 print("epoch %d" %(checkpoint['parameters']['epoch']))
-for i in range(10):
+for i in range(11):
     print('Class %d : %.2f %d/%d' % \
           (i,class_correct_count[i]/class_count[i],class_correct_count[i],class_count[i]))
 
@@ -49,15 +49,14 @@ net.eval()
 # Input to the model
 x = torch.randn(batch_size, 3, 224, 224, requires_grad=True)
 
-torch_out = torch_model(x)
 # Export the model
-torch.onnx.export(torch_model,               # model being run
+torch.onnx.export(net,               # model being run
                   x,                         # model input (or a tuple for multiple inputs)
-                  "super_resolution.onnx",   # where to save the model (can be a file or file-like object)
+                  "./trainedModel/super_resolution.onnx",   # where to save the model (can be a file or file-like object)
                   export_params=True,        # store the trained parameter weights inside the model file
                   opset_version=10,          # the ONNX version to export the model to
                   do_constant_folding=True,  # whether to execute constant folding for optimization
                   input_names = ['input'],   # the model's input names
                   output_names = ['output'], # the model's output names
-                  dynamic_axes={'input' : {0 : 'batch_size'},    # variable lenght axes
-                                'output' : {0 : 'batch_size'}})
+				  dynamic_axes={'input' : {0 : 'batch_size'}, 'output' : {0 : 'batch_size'}}
+                )

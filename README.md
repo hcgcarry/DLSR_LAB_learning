@@ -12,6 +12,9 @@ load and check testing the accuracy of exist model :python3 loadAndTestModel.py
 convert model to onnx:
 python3 netToOnnx.py
 
+convert model to onnx with dynamic batch size:
+python3 dynamicNetToOnnx.py
+
 
 openvino (should have enviroment)
 optimization:
