@@ -34,8 +34,6 @@ class custom_dataset_skewed_food(Dataset):
     def __init__(self,mode):
         self.getImage(mode)
         self.data_len = len(self.image_label_list)
-    def setTransform(self,transform):
-        self.transform =transform
 
     def getImage(self,mode):
         if mode == "training":
@@ -51,13 +49,11 @@ class custom_dataset_skewed_food(Dataset):
             self.image_path_list.extend(images_path)
             self.image_label_list.extend([index]*len(images_path))
             self.each_class_size.append(len(images_path))
-            '''
-            self.image_path_list.append(images_path)
-            self.image_label_list.append([index]*len(images_path))
-            self.data_len = self.data_len + len(images_path)
-            '''
+
     def setImgaug(self,imgaug):
         self.Imgaug=imgaug
+    def setTransform(self,transform):
+        self.transform =transform
         
     def __getitem__(self, index):
         single_image_path = self.image_path_list[index]
@@ -176,3 +172,108 @@ class custom_dataset_skewed_food(Dataset):
 
 
 
+
+class brid(Dataset):
+    skewed_training_path = "/workspace/CV/hw1/2021VRDL_HW1_datasets/training_dataset"
+    skewed_testing_path = "/workspace/CV/hw1/2021VRDL_HW1_datasets/testing_dataset"
+    skewed_validation_path = "/workspace/CV/hw1/2021VRDL_HW1_datasets/validation_dataset"
+
+    class_num=200
+
+    transform=None
+    Imgaug = None
+    
+    def __init__(self,mode):
+        self.mode = mode
+        self.getImage(mode)
+        self.getLabel()
+        self.data_len = len(self.image_list)
+        # print("self.datalen",self.data_len)
+        # print("image_name_list",self.image_name_list)
+        # print("image_list",self.image_list)
+        # print("label",self.labelDict)
+
+    def getImage(self,mode):
+        if mode == "training":
+            dir_path= self.skewed_training_path
+        elif mode == "testing":
+            dir_path= self.skewed_testing_path
+        elif mode == "validation":
+            dir_path= self.skewed_validation_path
+
+        path = dir_path +  "/*"
+        images_path = glob.glob(path)
+        self.image_list=  []
+        self.image_name_list = []
+        for image_path in images_path:
+            img = Image.open(image_path).convert('RGB')
+            self.image_list.append(img)
+            self.image_name_list.append(image_path.split('/')[-1])
+
+
+
+    def getLabelByIndex(self,index):
+        return self.labelDict[self.image_name_list[index]]
+        
+
+    def getLabel(self):
+        label_path = "/workspace/CV/hw1/2021VRDL_HW1_datasets/training_labels.txt"
+        self.labelDict = {}
+        self.labelValue2labelName = {}
+        
+        with open(label_path,'r') as f:
+            for line in f.readlines():
+                labelValue = int(line.split()[1].split('.')[0])-1
+                self.labelDict[line.split()[0]] = labelValue
+                label = line.split()[1]
+                self.labelValue2labelName[labelValue] = label
+
+        # print("labelDict",self.labelDict)
+        # print("labelvalue2labelNmae",self.labelValue2labelName)
+    def labelValue2Label(self,labelValue):
+        return self.labelValue2labelName[labelValue]
+
+
+    def setTransform(self,transform):
+        self.transform =transform
+    def setImgaug(self,imgaug):
+        self.Imgaug=imgaug
+        
+    def __getitem__(self, index):
+
+        ## 使用imgaug 做augumetation
+        # 'images' should be either a 4D numpy array of shape (N, height, width, channels)
+        # or a list of 3D numpy arrays, each having shape (height, width, channels).
+        # Grayscale images must have shape (height, width, 1) each.
+        # All images must have numpy's dtype uint8. Values are expected to be in
+        # range 0-255.
+        # print("getItem",index)
+        img = self.image_list[index]
+
+        if self.Imgaug is not None:
+            im_as_np = np.asarray(img)
+            im_as_np = self.Imgaug.augment_image(im_as_np)
+            #img = torch.from_numpy(im_as_np)
+            img = Image.fromarray(im_as_np, mode='RGB')
+
+
+
+        # Add channel dimension, dim = 1x28x28
+        # Note: You do not need to do this if you are reading RGB images
+        # or i there is already channel dimension
+        #im_as_np = np.expand_dims(im_as_np, 0)
+
+
+
+        if self.transform is not None:
+            img = self.transform(img)
+        if self.mode == "testing":
+            label = self.image_name_list[index]
+        else:
+            label = self.getLabelByIndex(index)
+        #print("index",index,"img path",single_image_path,"label",label)
+        # label = torch.randn(1)
+        return (img, label)
+
+    def __len__(self):
+        return self.data_len
