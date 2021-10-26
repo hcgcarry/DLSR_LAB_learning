@@ -8,14 +8,14 @@ load and check testing the accuracy of exist model :python3 loadAndTestModel.py
 
 ## brid
 floder :
-2021VRDL_HW1_datasets/
-    testing_dataset/
-    training_dataset/
-    validation_dataset/ 這個我自己加的 把300張training_dataset 搬過來
-code/
-    DLSR_LAB_learning/
-        train.py
-        test.py
+* 2021VRDL_HW1_datasets/
+    * testing_dataset/
+    * training_dataset/
+    * validation_dataset/ 這個我自己加的 把300張training_dataset 搬過來
+* code/
+    * DLSR_LAB_learning/
+        * train.py
+        * test.py
 
 
 ### brid training
@@ -27,6 +27,7 @@ python3 test.py
 
 
 
+## food11
 convert model to onnx:
 python3 netToOnnx.py
 
