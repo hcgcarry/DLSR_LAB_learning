@@ -1,8 +1,22 @@
 
+import numpy as np
+from TripletLoss import TripletLoss
+import tqdm
+import torchvision.transforms as transforms
+import torch.optim as optim
+import torchvision.models as models
 import torch.nn.functional as F
+from custom_dataset import brid
 from thop import profile
 import torch.nn as nn
 import torch
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+print("Current device: ",device)
+
+
+
+
+
 class Net(nn.Module):
 
     total_FLOPs_count =0
@@ -163,4 +177,131 @@ class Net(nn.Module):
         print("total_MACs_count",self.total_MACs_count)
     def getTotalFLOPsCount(self):
         print("total_FLOPs_count",self.total_FLOPs_count)
+
+class my_model(nn.Module):
+    def __init__(self,num_of_class,init_lr,epochs):
+        super().__init__()
+
+        self.epochs = epochs
+        self.init_lr =init_lr
+        model = models.resnet50(pretrained=True);
+        # replace the last layer
+        num_features = model.fc.in_features
+        model.fc = nn.Linear(num_features, num_of_class)
+        # model.fc.requires_grad_
+        # for idx, (name, param) in enumerate(model.named_parameters()):
+        #     param.requires_grad_ = False
+
+        # model.fc.requires_grad_ = True
+        #model.defineDropout(dropout)
+        self.model = model.to(device)
+
+        #loss function
+        # weights=trainset.getClassWeight()
+        # class_weights = torch.FloatTensor(weights).to(device)
+        #optimization algorithm
+        # self.optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+
+        #weight_decay 是l2 regularization
+
+        self.optimizer= optim.Adam(model.parameters(), lr=init_lr)
+        self.criterion = nn.CrossEntropyLoss()
+        # criterion = TripletLoss()
+
+
+    def validation_run(self,validation_loader,validation_set):
+        correct = 0 
+        for i, (inputs, labels) in enumerate(validation_loader , 0):
+            print("batch:",i)
+            # change the type into cuda tensor
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+
+            # forward + backward + optimize
+            outputs = self.model(inputs)
+            # select the class with highest probability
+            _, pred = outputs.max(1)
+            correct += pred.eq(labels).sum().item()
+
+        # writeResult2Answer(testset,resultDict)
+        print('validation accuracy: %.4f' % (correct/len(validation_set)))
+
+
+    def train(self,trainloader,trainset,validation_loader,validation_set):
+        self.model.train()
+        for epoch in range(self.epochs):  # loop over the dataset multiple times
+            running_loss = 0.0
+            correct = 0
+
+            for i,(inputs, labels) in enumerate(trainloader,0):
+                # print("inputs.shape",inputs.shape)
+                # print("labels",labels)
+
+                #change the type into cuda tensor
+                inputs = inputs.to(device) 
+                labels = labels.to(device) 
+
+                # zero the parameter gradients
+                self.optimizer.zero_grad()
+                # forward + backward + optimize
+                outputs = self.model(inputs)
+                # select the class with highest probability
+                _, pred = outputs.max(1)
+                # if the model predicts the same results as the true
+                # label, then the correct counter will plus 1
+                correct += pred.eq(labels).sum().item()
+                #each class
+                loss = self.criterion(outputs, labels)
+                loss.backward()
+                self.optimizer.step()
+
+                # print statistics
+                running_loss += loss.item()
+                # if count % 20 == 19:    # print every 200 mini-batches
+                print('[%d, %5d] loss: %.3f' % (epoch + 1, i+ 1, running_loss / 20))
+                running_loss = 0.0
+            print('%d epoch, training accuracy: %.4f' % (epoch+1, correct/len(trainset)))
+            self.validation_run(validation_loader,validation_set)
+    def training_tripletLoss(self):
+        self.model.train()
+        criterion = TripletLoss()
+        for epoch in tqdm(range(self.epochs), desc="Epochs"):
+            running_loss = []
+            for step, (anchor_img, positive_img, negative_img, anchor_label) in enumerate(tqdm(train_loader, desc="Training", leave=False)):
+                anchor_img = anchor_img.to(device)
+                positive_img = positive_img.to(device)
+                negative_img = negative_img.to(device)
+                
+                self.optimizer.zero_grad()
+                anchor_out = self.model(anchor_img)
+                positive_out = self.model(positive_img)
+                negative_out = self.model(negative_img)
+                
+                loss = criterion(anchor_out, positive_out, negative_out)
+                loss.backward()
+                self.optimizer.step()
+                
+                running_loss.append(loss.cpu().detach().numpy())
+            print("Epoch: {}/{} - Loss: {:.4f}".format(epoch+1, self.epochs, np.mean(running_loss)))
+
+
+    def saveModel(self,correct):
+        print('Finished Training')
+        print('==> Saving model..')
+        state = {
+            'model': self.model.state_dict(),
+            'acc': correct/len(self.trainset),
+            'parameters':{
+                'epoch': self.epochs,
+                'dropout': self.dropout,
+                'optimizer':self.optimizer.__repr__
+            }
+        }
+        torch.save(state, './trainedModel/skew_checkpoint.t7')
+        #save entire model
+        torch.save(self.model, './trainedModel/skew_model.pt')
+        print('Finished Saving')
+
+
+
 
